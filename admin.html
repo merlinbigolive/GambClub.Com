@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>GAMB CLUB — Visitor Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{min-height:100vh}
+    .admin-shell{max-width:1200px;margin:0 auto;padding:42px 5% 70px}
+    .admin-head{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:24px}
+    .admin-head h1{margin:0;font-size:clamp(28px,4vw,44px)}
+    .admin-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .admin-btn{border:1px solid #263940;background:#0c151b;color:#eef7f5;padding:11px 15px;border-radius:10px;cursor:pointer;font-weight:700}
+    .admin-btn.danger{border-color:#5d3030;color:#ffbcbc}
+    .admin-card{background:#0b141a;border:1px solid #1b2b32;border-radius:16px;overflow:hidden}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+    .stat{padding:18px;border:1px solid #1b2b32;border-radius:14px;background:#0b141a}
+    .stat small{display:block;color:#82959d;margin-bottom:7px}
+    .stat strong{font-size:26px}
+    .table-scroll{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:760px}
+    th,td{padding:14px 16px;text-align:left;border-bottom:1px solid #17272e;font-size:13px}
+    th{color:#8ea1a8;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+    .login{max-width:420px;margin:12vh auto;padding:28px;background:#0b141a;border:1px solid #1b2b32;border-radius:16px}
+    .login input{width:100%;box-sizing:border-box;padding:13px;border-radius:10px;border:1px solid #263940;background:#071015;color:white;margin:12px 0}
+    .hidden{display:none!important}
+    .muted{color:#7f939b}
+    @media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.admin-head{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div id="loginView" class="admin-shell">
+    <div class="login">
+      <div class="eyebrow">GAMB CLUB · ADMIN</div>
+      <h1>Visitor Records</h1>
+      <p class="muted">Enter the admin password configured in <code>visitor-config.js</code>.</p>
+      <input id="password" type="password" placeholder="Admin password" autocomplete="current-password">
+      <button id="loginBtn" class="admin-btn">Login</button>
+      <p id="loginMsg" class="muted"></p>
+    </div>
+  </div>
+
+  <main id="adminView" class="admin-shell hidden">
+    <div class="admin-head">
+      <div><div class="eyebrow">GAMB CLUB · VISITOR ADMIN</div><h1>Visitor Records</h1></div>
+      <div class="admin-actions">
+        <button id="refreshBtn" class="admin-btn">Refresh</button>
+        <button id="resetBtn" class="admin-btn danger">Reset Records</button>
+        <button id="logoutBtn" class="admin-btn">Logout</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Total Visitors</small><strong id="total">0</strong></div>
+      <div class="stat"><small>Human</small><strong id="human">0</strong></div>
+      <div class="stat"><small>Bots</small><strong id="bots">0</strong></div>
+      <div class="stat"><small>Locations</small><strong id="locations">0</strong></div>
+    </div>
+    <div class="admin-card table-scroll">
+      <table>
+        <thead><tr><th>Time</th><th>Type</th><th>City</th><th>Country</th><th>Referrer</th><th>User Agent</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="visitor-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const cfg = window.GAMB_VISITOR_CONFIG || {};
+    const loginView = document.getElementById("loginView");
+    const adminView = document.getElementById("adminView");
+    const msg = document.getElementById("loginMsg");
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    let client;
+
+    function showAdmin(){
+      loginView.classList.add("hidden");
+      adminView.classList.remove("hidden");
+      loadRows();
+    }
+    function doLogin(){
+      if ((document.getElementById("password").value || "") === (cfg.adminPassword || "")) {
+        sessionStorage.setItem("gamb_admin_auth","1");
+        showAdmin();
+      } else msg.textContent = "Incorrect password.";
+    }
+    document.getElementById("loginBtn").onclick = doLogin;
+    document.getElementById("password").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+    document.getElementById("logoutBtn").onclick = () => { sessionStorage.removeItem("gamb_admin_auth"); location.reload(); };
+
+    async function loadRows(){
+      if(!client){ client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey); }
+      const {data,error} = await client.from("gambclub_visitor_logs").select("*").order("created_at",{ascending:false}).limit(500);
+      if(error){ document.getElementById("rows").innerHTML = '<tr><td colspan="6">Database connection/setup error.</td></tr>'; return; }
+      const human = data.filter(x=>x.visitor_type==="human").length;
+      const bots = data.filter(x=>x.visitor_type==="bot").length;
+      const locations = new Set(data.map(x => [x.city,x.country].filter(Boolean).join(", ")).filter(Boolean)).size;
+      document.getElementById("total").textContent = data.length;
+      document.getElementById("human").textContent = human;
+      document.getElementById("bots").textContent = bots;
+      document.getElementById("locations").textContent = locations;
+      document.getElementById("rows").innerHTML = data.length ? data.map(x => `
+        <tr><td>${esc(new Date(x.created_at).toLocaleString())}</td>
+        <td>${esc(x.visitor_type)}</td><td>${esc(x.city)}</td><td>${esc(x.country)}</td>
+        <td>${esc(x.referrer || "Direct")}</td><td title="${esc(x.user_agent)}">${esc((x.user_agent||"").slice(0,70))}</td></tr>
+      `).join("") : '<tr><td colspan="6" class="muted">No visitor records yet.</td></tr>';
+    }
+    document.getElementById("refreshBtn").onclick = loadRows;
+    document.getElementById("resetBtn").onclick = async () => {
+      if(!confirm("Delete all GAMB CLUB visitor records?")) return;
+      const {error} = await client.from("gambclub_visitor_logs").delete().neq("id",0);
+      if(error) alert("Reset failed. Check Supabase RLS policy.");
+      else loadRows();
+    };
+
+    if(cfg.supabaseUrl && !cfg.supabaseUrl.startsWith("YOUR_") && cfg.supabaseAnonKey && !cfg.supabaseAnonKey.startsWith("YOUR_")){
+      if(sessionStorage.getItem("gamb_admin_auth")==="1") showAdmin();
+    } else {
+      msg.textContent = "Add your Supabase URL and anon key in visitor-config.js first.";
+    }
+  </script>
+</body>
+</html>
