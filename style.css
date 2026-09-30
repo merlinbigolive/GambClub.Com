@@ -152,3 +152,50 @@ body{
 @media(prefers-reduced-motion:reduce){
   .brand-mark,.brand > span:last-child,.btn-green,.hero-glow,.hero h1 em,.hero-inner:after{animation:none}
 }
+
+a:not(.btn):not(.nav-link){
+  color:#d9dde3;
+  background-image:linear-gradient(110deg,#8e949c 0%,#f8fafc 22%,#b9bec6 42%,#ffffff 50%,#aeb4bc 68%,#e6e9ed 82%,#8f959d 100%);
+  background-size:220% auto;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:silverShine 4.5s linear infinite;
+  text-decoration:none;
+}
+@keyframes silverShine{
+  0%{background-position:220% center}
+  100%{background-position:-20% center}
+}
+
+/* Premium silver + gold finish — no green UI */
+.logo-mark,.brand-mark,.gc-mark{
+  color:#f1d27a !important;
+  border-color:#d6b65b !important;
+  box-shadow:0 0 18px rgba(214,182,91,.22),inset 0 0 12px rgba(255,255,255,.04);
+}
+.btn-primary{
+  color:#0a0c0f !important;
+  background:linear-gradient(110deg,#b98b2f,#f4d77b,#fff4bf,#d2ad52,#a87924);
+  background-size:240% auto;
+  animation:goldShine 4s linear infinite;
+}
+.btn-secondary{
+  color:#e5e8ec !important;
+  border-color:#89909a !important;
+}
+@keyframes goldShine{
+  0%{background-position:220% center}
+  100%{background-position:-20% center}
+}
+
+/* Mobile cinematic hero video */
+.hero-mobile-video,.hero-video-overlay{display:none}
+@media(max-width:620px){
+  .hero-mobile-video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;z-index:0;opacity:.52;filter:saturate(.82) contrast(1.05) brightness(.72)}
+  .hero-video-overlay{display:block;position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(4,6,9,.74) 0%,rgba(4,6,9,.40) 38%,rgba(4,6,9,.78) 100%),linear-gradient(90deg,rgba(4,6,9,.35),rgba(4,6,9,.08),rgba(4,6,9,.35))}
+  .hero .grid-bg{z-index:1;opacity:.12}
+  .hero .hero-glow{z-index:1}
+  .hero .hero-inner{z-index:2}
+  .hero .hero-statbar{z-index:2}
+}
